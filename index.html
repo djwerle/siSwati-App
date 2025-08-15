@@ -1,34 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>siSwati Course</title>
-    <link rel="stylesheet" href="/style.css">
-  </head>
-  <body>
-    <!-- Auth Container -->
-    <div id="auth-container" class="auth-container" style="display:none;">
-      <h2>Willkommen</h2>
-      <div class="form-group">
-        <label for="email">E-Mail</label>
-        <input type="email" id="email" placeholder="Deine E-Mail">
-      </div>
-      <div class="form-group">
-        <label for="password">Passwort</label>
-        <input type="password" id="password" placeholder="Dein Passwort">
-      </div>
-      <button id="login-btn" class="auth-btn">Login</button>
-      <button id="signup-btn" class="auth-btn secondary">Registrieren</button>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>siSwati Course</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+  <!-- Auth Container -->
+  <div id="auth-container" class="auth-container" style="display:none;">
+    <h2>Willkommen</h2>
+    <div class="form-group">
+      <label for="email">E-Mail</label>
+      <input type="email" id="email" placeholder="Deine E-Mail">
+    </div>
+    <div class="form-group">
+      <label for="password">Passwort</label>
+      <input type="password" id="password" placeholder="Dein Passwort">
+    </div>
+    <button id="login-btn" class="auth-btn">Login</button>
+    <button id="signup-btn" class="auth-btn secondary">Registrieren</button>
+  </div>
+
+  <!-- App Container -->
+  <div id="app-container" style="display:none;">
+    <button id="logout-btn" class="auth-btn secondary" style="float:right;">Logout</button>
+    <h1>siSwati Course</h1>
+    <div id="app">Lade Daten…</div>
+    <!-- Lernmodus -->
+    <div id="game-container" style="display:none;">
+      <h2 id="question">Frage</h2>
+      <p id="answer">Antwort</p>
+      <button id="correct-btn">Richtig</button>
+      <button id="wrong-btn">Falsch</button>
     </div>
 
-    <!-- App Container -->
-    <div id="app-container" style="display:none;">
-      <button id="logout-btn" class="auth-btn secondary" style="float:right;">Logout</button>
-      <h1>siSwati Course</h1>
-      <div id="app">Lade Daten…</div>
-    </div>
+  </div>
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>
