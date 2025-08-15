@@ -1,25 +1,34 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>siSwati Course</title>
-    <style>
-      body { font-family: system-ui, Arial, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 12px; }
-      h1 { margin-bottom: 8px; }
-      h2 { margin-top: 24px; }
-      li { margin: 6px 0; line-height: 1.5; }
-      img { max-height: 80px; vertical-align: middle; }
-      audio { vertical-align: middle; }
-    </style>
+    <link rel="stylesheet" href="/style.css">
   </head>
   <body>
-    <h1>siSwati Course</h1>
-    <p>Deine Daten aus Supabase, live.</p>
-    <div id="app">Lade Daten…</div>
+    <!-- Auth Container -->
+    <div id="auth-container" class="auth-container" style="display:none;">
+      <h2>Willkommen</h2>
+      <div class="form-group">
+        <label for="email">E-Mail</label>
+        <input type="email" id="email" placeholder="Deine E-Mail">
+      </div>
+      <div class="form-group">
+        <label for="password">Passwort</label>
+        <input type="password" id="password" placeholder="Dein Passwort">
+      </div>
+      <button id="login-btn" class="auth-btn">Login</button>
+      <button id="signup-btn" class="auth-btn secondary">Registrieren</button>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container" style="display:none;">
+      <button id="logout-btn" class="auth-btn secondary" style="float:right;">Logout</button>
+      <h1>siSwati Course</h1>
+      <div id="app">Lade Daten…</div>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
-
   </body>
 </html>
-

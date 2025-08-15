@@ -1,49 +1,84 @@
 import { createClient } from '@supabase/supabase-js'
 
-// ⬇️ Aus .env gelesen (bei Vite heißt das import.meta.env)
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-// kleine Sicherheitsprüfung für Einsteiger
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  document.getElementById('app').innerHTML = `
-    <p style="color:red">
-      Fehler: Supabase-URL oder anon key fehlt.<br>
-      Hast du die Datei <code>.env</code> mit <code>VITE_SUPABASE_URL</code> und <code>VITE_SUPABASE_ANON_KEY</code> angelegt?
-    </p>`
-  throw new Error('Supabase env not set')
-}
-
+// 🔑 Supabase-Verbindung – hier deine echten Werte einsetzen:
+const SUPABASE_URL = 'https://kbzzuwcbcshdbtsimrlw.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienp1d2NiY3NoZGJ0c2ltcmx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5OTIyODMsImV4cCI6MjA3MDU2ODI4M30.0eutIAYGrfUc9ZMUO618FAEys_2YGWz4tBHpVV7sIa4'
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-async function load() {
+// HTML-Elemente abrufen
+const authContainer = document.getElementById('auth-container')
+const appContainer = document.getElementById('app-container')
+const loginBtn = document.getElementById('login-btn')
+const signupBtn = document.getElementById('signup-btn')
+const logoutBtn = document.getElementById('logout-btn')
+
+// Login-Button
+loginBtn?.addEventListener('click', async () => {
+  const email = document.getElementById('email').value
+  const password = document.getElementById('password').value
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) {
+    alert('Login fehlgeschlagen: ' + error.message)
+  }
+})
+
+// Registrieren-Button
+signupBtn?.addEventListener('click', async () => {
+  const email = document.getElementById('email').value
+  const password = document.getElementById('password').value
+  const { error } = await supabase.auth.signUp({ email, password })
+  if (error) {
+    alert('Registrierung fehlgeschlagen: ' + error.message)
+  } else {
+    alert('Registrierung erfolgreich! Bitte prüfe deine E-Mail.')
+  }
+})
+
+// Logout-Button
+logoutBtn?.addEventListener('click', async () => {
+  await supabase.auth.signOut()
+})
+
+// Auth-Status überwachen
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session) {
+    authContainer.style.display = 'none'
+    appContainer.style.display = 'block'
+    loadCourse()
+  } else {
+    authContainer.style.display = 'block'
+    appContainer.style.display = 'none'
+  }
+})
+
+// Kurs laden
+async function loadCourse() {
   const app = document.getElementById('app')
   app.innerHTML = 'Lade Levels…'
 
-  // Levels laden (sort optional)
-  const { data: levels, error: lvlErr } = await supabase
+  const { data: levels, error: levelsError } = await supabase
     .from('levels')
     .select('*')
     .order('sort', { ascending: true })
 
-  if (lvlErr) {
-    app.innerHTML = `<p style="color:red">Fehler beim Laden der Levels: ${lvlErr.message}</p>`
+  if (levelsError) {
+    app.innerHTML = 'Fehler beim Laden der Levels: ' + levelsError.message
     return
   }
 
   app.innerHTML = ''
   for (const lvl of levels || []) {
-    const section = document.createElement('section')
-    section.innerHTML = `<h2>${lvl.name}</h2>`
+    const block = document.createElement('div')
+    block.innerHTML = `<h2>${lvl.name}</h2>`
 
-    const { data: words, error: wErr } = await supabase
+    const { data: words, error: wordsError } = await supabase
       .from('words')
       .select('*')
       .eq('level_id', lvl.id)
 
-    if (wErr) {
-      section.innerHTML += `<p style="color:red">Fehler beim Laden der Wörter: ${wErr.message}</p>`
-      app.appendChild(section)
+    if (wordsError) {
+      block.innerHTML += `<p>Fehler beim Laden der Wörter: ${wordsError.message}</p>`
+      app.appendChild(block)
       continue
     }
 
@@ -52,15 +87,12 @@ async function load() {
       const li = document.createElement('li')
       li.innerHTML = `
         <strong>${w.term}</strong> – ${w.translation}
-        ${w.audio_url ? `&nbsp;<audio controls src="${w.audio_url}"></audio>` : ''}
-        ${w.image_url ? `&nbsp;<img src="${w.image_url}" alt="">` : ''}
+        ${w.audio_url ? `<audio controls src="${w.audio_url}"></audio>` : ''}
+        ${w.image_url ? `<img src="${w.image_url}" style="max-height:80px">` : ''}
       `
       list.appendChild(li)
     }
-
-    section.appendChild(list)
-    app.appendChild(section)
+    block.appendChild(list)
+    app.appendChild(block)
   }
 }
-
-load()
