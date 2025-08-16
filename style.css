@@ -1575,3 +1575,22 @@ body {
   }
 }
 
+#game-container {
+  display: block !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-size: 20px;
+  padding: 20px;
+}
+
+#question {
+  font-weight: bold;
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+#answer {
+  color: #333;
+  font-size: 20px;
+  margin: 12px 0;
+}

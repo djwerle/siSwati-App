@@ -1,46 +1,151 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>siSwati Course</title>
-  <link rel="stylesheet" href="/style.css">
+  <meta charset="UTF-8">
+  <title>siSwati Lernapp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6fb;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    #auth-container, #app-container, #game-container {
+      width: 100%;
+      max-width: 600px;
+      padding: 30px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    #auth-container {
+      display: block; /* Startansicht */
+    }
+
+    h1, h2 {
+      margin-bottom: 20px;
+    }
+
+    input {
+      display: block;
+      margin: 10px auto;
+      padding: 12px;
+      width: 80%;
+      max-width: 320px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 12px 24px;
+      margin: 8px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    #show-answer-btn {
+      background: #007bff;
+      color: #fff;
+    }
+
+    #correct-btn {
+      background: #28a745;
+      color: #fff;
+    }
+
+    #wrong-btn {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    #logout-btn {
+      background: #6c757d;
+      color: #fff;
+    }
+
+    #question-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+      padding: 40px 20px;
+      margin: 20px 0;
+      font-size: 28px;
+      font-weight: bold;
+      animation: slideIn 0.4s ease;
+    }
+
+    #answer {
+      font-size: 22px;
+      margin: 20px 0;
+      color: #333;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
 </head>
-
 <body>
-  <!-- Auth Container -->
-  <div id="auth-container" class="auth-container" style="display:none;">
-    <h2>Willkommen</h2>
-    <div class="form-group">
-      <label for="email">E-Mail</label>
-      <input type="email" id="email" placeholder="Deine E-Mail">
-    </div>
-    <div class="form-group">
-      <label for="password">Passwort</label>
-      <input type="password" id="password" placeholder="Dein Passwort">
-    </div>
-    <button id="login-btn" class="auth-btn">Login</button>
-    <button id="signup-btn" class="auth-btn secondary">Registrieren</button>
+
+  <!-- Login -->
+  <div id="auth-container">
+    <h1>siSwati Lernen</h1>
+    <input id="email" type="email" placeholder="E-Mail" />
+    <input id="password" type="password" placeholder="Passwort" />
+    <button id="login-btn">Einloggen</button>
+    <button id="signup-btn">Registrieren</button>
   </div>
 
-  <!-- App Container -->
-  <div id="app-container" style="display:none;">
-    <button id="logout-btn" class="auth-btn secondary" style="float:right;">Logout</button>
-    <h1>siSwati Course</h1>
-    <div id="app">Lade Daten…</div>
-    
+  <!-- Level Übersicht -->
+  <div id="app-container">
+    <h2>Willkommen!</h2>
+    <div id="app"></div>
+    <button id="logout-btn">Logout</button>
+  </div>
+
   <!-- Lernmodus -->
-    <div id="game-container" style="display:none;">
-      <h2 id="question">Frage</h2>
-      <p id="answer">Antwort</p>
-      <button id="correct-btn">Richtig</button>
-      <button id="wrong-btn">Falsch</button>
+  <div id="game-container">
+    <div id="question-card">
+      <h2 id="question"></h2>
+      <p id="answer"></p>
     </div>
-
+    <div>
+      <button id="show-answer-btn">Antwort zeigen</button>
+      <button id="correct-btn" style="display:none;">✔️ Richtig</button>
+      <button id="wrong-btn" style="display:none;">❌ Falsch</button>
+    </div>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="src/main.js"></script>
 </body>
-
 </html>
