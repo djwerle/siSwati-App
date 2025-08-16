@@ -78,7 +78,6 @@ async function loadCourse() {
     const block = document.createElement('div')
     block.innerHTML = `<h2>${lvl.name}</h2>`
 
-    // Start-Button für Level
     const startBtn = document.createElement('button')
     startBtn.textContent = 'Level lernen'
     startBtn.addEventListener('click', () => startLevel(lvl.id))
@@ -94,7 +93,9 @@ async function startLevel(levelId) {
   const { data: words, error: wordsError } = await supabase
     .from('words')
     .select('*')
-    .eq('level_id', levelId)
+    .eq('level_id', level_id)
+
+  console.log('Loaded words:', words, 'Error:', wordsError) // <-- Add this
 
   if (wordsError) {
     alert('Fehler beim Laden der Wörter: ' + wordsError.message)
@@ -126,13 +127,10 @@ async function startLevel(levelId) {
   // 4. Shuffle & Start
   currentIndex = 0
   filteredWords.sort(() => Math.random() - 0.5)
-
   gameContainer.style.display = 'block'
   appContainer.style.display = 'none'
-
   showWord(filteredWords)
 }
-
 
 // === Wort anzeigen ===
 function showWord(words) {
