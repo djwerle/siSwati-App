@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>siSwati Learning App</title>
@@ -8,6 +9,7 @@
   <!-- Use your merged main.js as the main script -->
   <script type="module" src="/src/main.js"></script>
 </head>
+
 <body>
   <div class="app-container">
     <!-- ================== AUTH SCREEN ================== -->
@@ -173,6 +175,19 @@
 
       <!-- ================== LEARNING SCREEN ================== -->
       <div class="learning-screen hidden" id="learning-screen">
+        <!-- Feedback (Correct/Incorrect) -->
+        <div id="feedback-container" class="hidden">
+          <div id="feedback-message"></div>
+        </div>
+
+        <!-- Progressbar -->
+        <div id="progress-container">
+          <div id="progress-bar"></div>
+        </div>
+        <!-- Platzhalter für Lernschritte -->
+        <div id="step-content"></div>
+
+
         <div class="learning-header">
           <button class="back-btn" onclick="backToLevels()">← Back</button>
           <div class="current-mode-info">
@@ -189,6 +204,10 @@
         </div>
       </div>
     </div>
+    <div id="step-content" class="step-container"></div>
   </div>
+
+  <script type="module" src="src/main.js"></script>
 </body>
+
 </html>

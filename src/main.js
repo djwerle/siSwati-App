@@ -252,26 +252,34 @@ async function getNewWordsInLevel(levelId) {
 async function renderLevels() {
   const levelGrid = document.getElementById('level-grid')
   levelGrid.innerHTML = ''
+
   for (const level of levels) {
+    // Hole die neuen Wörter und den Fortschritt anhand der level.id (nicht level_name/UUID-String)
     const newWords = await getNewWordsInLevel(level.id)
     const levelProgress = await getLevelProgress(level.id)
     const isCompleted = levelProgress.completed === levelProgress.total
+
     const levelItem = document.createElement('div')
     levelItem.className = `level-item`
+
     if (newWords.length > 0) {
       levelItem.onclick = () => startNewWordsMode(level.id)
     }
+
     levelItem.innerHTML = `
       <div class="level-icon ${isCompleted ? 'completed' : ''}">
-        <span class="level-number">${level.id}</span>
+        <span class="level-number"></span> <!-- hier absichtlich leer -->
       </div>
-      <div class="level-name">${level.name}</div>
+      <div class="level-name">${level.name || ''}</div>
       <div class="level-progress">${levelProgress.completed}/${levelProgress.total}</div>
-      ${newWords.length > 0 ? `<div class="level-new-words">${newWords.length} new words</div>` : '<div class="level-new-words">All learned</div>'}
+      ${newWords.length > 0
+        ? `<div class="level-new-words">${newWords.length} new words</div>`
+        : '<div class="level-new-words">All learned</div>'}
     `
     levelGrid.appendChild(levelItem)
   }
 }
+
 
 async function getLevelProgress(levelId) {
   const words = await getWordsInLevel(levelId)
@@ -475,15 +483,14 @@ async function showStep() {
       <div class="multiple-choice-section">
         <div class="question-header">Pick the correct answer</div>
         <div class="question-text">${word.term}</div>
-        <div class="choices-grid">
-          ${options.map((option, index) =>
-            {
-              return `<button class="choice-button" onclick="checkChoice('${option}', '${word.translation}', 1)">
+      <div class="choices-grid">
+          ${options.map((option, index) => {
+      return `<button class="choice-button" onclick="checkChoice('${option}', '${word.translation}', 1)">
               <span class="choice-number">${index + 1}</span>
               <span class="choice-text">${option}</span>
             </button>`
-            }
-          ).join('')}
+    }
+    ).join('')}
         </div>
         <div id="feedback" class="feedback hidden"></div>
       </div>
@@ -497,20 +504,20 @@ async function showStep() {
         <div class="question-header">Choose the translation for what you hear</div>
         <div class="question-text">${word.term}</div>
         <button class="next-button" onclick="nextStep()">Skip (Audio not implemented)</button>
-      </div>
+    </div>
     `
     return
   }
   // Step 3: Input
   if (currentStep === 3) {
     stepContent.innerHTML = `
-      <div class="input-section">
+    <div class="input-section">
         <div class="question-text">Type the siSwati word for "${word.term}":</div>
         <input type="text" class="text-input" id="user-input" placeholder="Type here..." onkeypress="handleEnter(event)">
         <br>
         <button class="submit-button" onclick="checkInput(3)">Check</button>
         <div id="feedback" class="feedback hidden"></div>
-      </div>
+    </div>
     `
     setTimeout(() => {
       document.getElementById('user-input').focus()
@@ -520,11 +527,11 @@ async function showStep() {
   // Step 4: Typing
   if (currentStep === 4) {
     stepContent.innerHTML = `
-      <div class="typing-section">
+    <div class="typing-section">
         <div class="typing-header">Type the correct translation</div>
         <div class="english-word">${word.term}</div>
         <div class="language-indicator">SISWATI</div>
-        <div class="typing-input-container">
+      <div class="typing-input-container">
           <input type="text" class="typing-input" id="typing-input" placeholder="" onkeypress="handleTypingEnter(event)">
         </div>
         <div id="typing-feedback" class="typing-feedback hidden"></div>
@@ -633,7 +640,7 @@ function handleTypingEnter(event) {
 window.handleTypingEnter = handleTypingEnter
 
 window.backToLevels = backToLevels
-window.handleLogout = async function() {
+window.handleLogout = async function () {
   await supabase.auth.signOut()
   currentUser = null
   showAuthScreen()
