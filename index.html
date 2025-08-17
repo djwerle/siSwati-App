@@ -1,151 +1,194 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>siSwati Lernapp</title>
+  <title>siSwati Learning App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <link rel="stylesheet" href="style.css">
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6fb;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    #auth-container, #app-container, #game-container {
-      width: 100%;
-      max-width: 600px;
-      padding: 30px;
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      text-align: center;
-      display: none;
-      animation: fadeIn 0.4s ease;
-    }
-
-    #auth-container {
-      display: block; /* Startansicht */
-    }
-
-    h1, h2 {
-      margin-bottom: 20px;
-    }
-
-    input {
-      display: block;
-      margin: 10px auto;
-      padding: 12px;
-      width: 80%;
-      max-width: 320px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-
-    button {
-      padding: 12px 24px;
-      margin: 8px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      transform: scale(1.05);
-    }
-
-    #show-answer-btn {
-      background: #007bff;
-      color: #fff;
-    }
-
-    #correct-btn {
-      background: #28a745;
-      color: #fff;
-    }
-
-    #wrong-btn {
-      background: #dc3545;
-      color: #fff;
-    }
-
-    #logout-btn {
-      background: #6c757d;
-      color: #fff;
-    }
-
-    #question-card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-      padding: 40px 20px;
-      margin: 20px 0;
-      font-size: 28px;
-      font-weight: bold;
-      animation: slideIn 0.4s ease;
-    }
-
-    #answer {
-      font-size: 22px;
-      margin: 20px 0;
-      color: #333;
-      display: none;
-      animation: fadeIn 0.4s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes slideIn {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-  </style>
+  <!-- Use your merged main.js as the main script -->
+  <script type="module" src="/src/main.js"></script>
 </head>
 <body>
-
-  <!-- Login -->
-  <div id="auth-container">
-    <h1>siSwati Lernen</h1>
-    <input id="email" type="email" placeholder="E-Mail" />
-    <input id="password" type="password" placeholder="Passwort" />
-    <button id="login-btn">Einloggen</button>
-    <button id="signup-btn">Registrieren</button>
-  </div>
-
-  <!-- Level Übersicht -->
-  <div id="app-container">
-    <h2>Willkommen!</h2>
-    <div id="app"></div>
-    <button id="logout-btn">Logout</button>
-  </div>
-
-  <!-- Lernmodus -->
-  <div id="game-container">
-    <div id="question-card">
-      <h2 id="question"></h2>
-      <p id="answer"></p>
+  <div class="app-container">
+    <!-- ================== AUTH SCREEN ================== -->
+    <div class="auth-screen" id="auth-screen">
+      <div class="auth-container">
+        <div class="auth-header">
+          <h1>siSwati</h1>
+          <p>Learn siSwati with spaced repetition</p>
+        </div>
+        <!-- Login Form -->
+        <div class="auth-form" id="login-form">
+          <h2>Sign In</h2>
+          <form>
+            <div class="form-group">
+              <label for="login-email">Email Address</label>
+              <input type="email" id="login-email" required>
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input type="password" id="login-password" required>
+            </div>
+            <button type="submit" class="auth-btn">Sign In</button>
+          </form>
+          <div class="auth-switch">
+            <p>Don't have an account? <a href="#" onclick="showRegisterForm()">Sign up</a></p>
+          </div>
+          <div class="auth-error hidden" id="login-error"></div>
+        </div>
+        <!-- Register Form -->
+        <div class="auth-form hidden" id="register-form">
+          <h2>Create Account</h2>
+          <form>
+            <div class="form-group">
+              <label for="register-email">Email Address</label>
+              <input type="email" id="register-email" required>
+            </div>
+            <div class="form-group">
+              <label for="register-password">Password</label>
+              <input type="password" id="register-password" required minlength="6">
+            </div>
+            <div class="form-group">
+              <label for="register-confirm">Confirm Password</label>
+              <input type="password" id="register-confirm" required minlength="6">
+            </div>
+            <button type="submit" class="auth-btn">Create Account</button>
+          </form>
+          <div class="auth-switch">
+            <p>Already have an account? <a href="#" onclick="showLoginForm()">Sign in</a></p>
+          </div>
+          <div class="auth-error hidden" id="register-error"></div>
+        </div>
+      </div>
     </div>
-    <div>
-      <button id="show-answer-btn">Antwort zeigen</button>
-      <button id="correct-btn" style="display:none;">✔️ Richtig</button>
-      <button id="wrong-btn" style="display:none;">❌ Falsch</button>
+
+    <!-- ================== MAIN APP SCREEN ================== -->
+    <div class="main-app hidden" id="main-app">
+      <div class="header">
+        <div class="header-content">
+          <h1>siSwati</h1>
+          <div class="user-info">
+            <span id="user-email"></span>
+            <span id="admin-badge" class="admin-badge hidden">Admin</span>
+            <button class="logout-btn" onclick="handleLogout()">Logout</button>
+          </div>
+        </div>
+        <div class="course-info">
+          <div class="words-learned">
+            <span id="words-learned-count">0</span> / <span id="total-words-count">0</span> words learned
+          </div>
+          <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================== LEVEL SELECTION ================== -->
+      <div class="level-selection" id="level-selection">
+        <div class="learning-modes">
+          <div class="mode-card" id="review-mode" onclick="startReviewMode()">
+            <div class="mode-icon review">🔄</div>
+            <div class="mode-title">Review</div>
+            <div class="mode-subtitle">Practice learned words</div>
+            <div class="mode-count" id="review-count">0 words</div>
+          </div>
+          <div class="mode-card" id="difficult-mode" onclick="startDifficultMode()">
+            <div class="mode-icon difficult">⚠️</div>
+            <div class="mode-title">Difficult Words</div>
+            <div class="mode-subtitle">Focus on problem words</div>
+            <div class="mode-count" id="difficult-count">0 words</div>
+          </div>
+        </div>
+        <div class="section-header">
+          <h2>Learn New Words</h2>
+          <p>Choose a level to learn new vocabulary</p>
+        </div>
+        <div class="level-grid" id="level-grid">
+          <!-- Levels will be rendered here -->
+        </div>
+        <div class="level-management" id="level-management">
+          <!-- Admin-only buttons will be rendered here -->
+        </div>
+      </div>
+
+      <!-- ================== LEVEL MANAGER MODAL ================== -->
+      <div class="modal-overlay hidden" id="level-manager-modal">
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Manage Levels</h2>
+            <button class="close-btn" onclick="hideLevelManager()">×</button>
+          </div>
+          <div class="modal-content">
+            <div class="level-manager-list" id="level-manager-list">
+              <!-- Level management items will be rendered here -->
+            </div>
+            <button class="add-level-btn" onclick="addNewLevel()">+ Add New Level</button>
+            <button id="logout-btn" onclick="handleLogout()">Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================== WORD MANAGER MODAL ================== -->
+      <div class="modal-overlay hidden" id="word-manager-modal">
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Manage Words</h2>
+            <button class="close-btn" onclick="hideWordManager()">×</button>
+          </div>
+          <div class="modal-content">
+            <div class="word-info">
+              <p>Add, edit, or delete words in each level. Changes are saved automatically.</p>
+            </div>
+            <div class="level-selector">
+              <label for="word-level-select">Select Level:</label>
+              <select id="word-level-select" onchange="renderWordManager()">
+                <!-- Options will be rendered here -->
+              </select>
+            </div>
+            <div class="word-manager-list" id="word-manager-list">
+              <!-- Word management items will be rendered here -->
+            </div>
+            <button class="add-word-btn" onclick="addNewWord()">+ Add New Word</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================== AUDIO MANAGER MODAL ================== -->
+      <div class="modal-overlay hidden" id="audio-manager-modal">
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Manage Audio Files</h2>
+            <button class="close-btn" onclick="hideAudioManager()">×</button>
+          </div>
+          <div class="modal-content">
+            <div class="audio-info">
+              <p>Upload MP3 files for correct pronunciation. Files will be stored locally in your browser.</p>
+            </div>
+            <div class="audio-manager-list" id="audio-manager-list">
+              <!-- Audio management items will be rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================== LEARNING SCREEN ================== -->
+      <div class="learning-screen hidden" id="learning-screen">
+        <div class="learning-header">
+          <button class="back-btn" onclick="backToLevels()">← Back</button>
+          <div class="current-mode-info">
+            <span id="current-mode-name">Learning Mode</span>
+            <div class="session-progress" id="session-progress">
+              <span id="current-word-number">1</span> / <span id="total-session-words">10</span>
+            </div>
+          </div>
+        </div>
+        <div class="flashcard" id="flashcard">
+          <div class="step-content" id="step-content">
+            <!-- Step content will be rendered here -->
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-
-  <script type="module" src="src/main.js"></script>
 </body>
 </html>

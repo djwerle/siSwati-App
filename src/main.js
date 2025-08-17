@@ -1,263 +1,647 @@
-// === Supabase Client ===
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://kbzzuwcbcshdbtsimrlw.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienp1d2NiY3NoZGJ0c2ltcmx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5OTIyODMsImV4cCI6MjA3MDU2ODI4M30.0eutIAYGrfUc9ZMUO618FAEys_2YGWz4tBHpVV7sIa4'
+// ===========================
+// Supabase Setup
+// ===========================
+const supabaseUrl = "https://kbzzuwcbcshdbtsimrlw.supabase.co"
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienp1d2NiY3NoZGJ0c2ltcmx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5OTIyODMsImV4cCI6MjA3MDU2ODI4M30.0eutIAYGrfUc9ZMUO618FAEys_2YGWz4tBHpVV7sIa4"
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-// === DOM Elemente ===
-const authContainer = document.getElementById('auth-container')
-const appContainer = document.getElementById('app-container')
-const gameContainer = document.getElementById('game-container')
+// ===========================
+// Global State
+// ===========================
+let currentUser = null
+let currentLevelId = null
+let currentLearningMode = null // 'new', 'review', 'difficult'
+let sessionWords = []
+let sessionIndex = 0
+let sessionStats = { correct: 0, wrong: 0 }
+let levels = []
+const SRS_INTERVALS = [1, 3, 7, 14, 30, 90, 180, 365] // Tage
+const DIFFICULT_THRESHOLD = 3
+const ADMIN_EMAIL = 'davidwerle@gmx.de'
 
-const loginBtn = document.getElementById('login-btn')
-const signupBtn = document.getElementById('signup-btn')
+// ===========================
+// UI Elements
+// ===========================
+const authContainer = document.getElementById('auth-screen')
+const appContainer = document.getElementById('main-app')
+const levelSelection = document.getElementById('level-selection')
+const learningScreen = document.getElementById('learning-screen')
+const loginForm = document.getElementById('login-form')
+const registerForm = document.getElementById('register-form')
 const logoutBtn = document.getElementById('logout-btn')
 
-const questionEl = document.getElementById('question')
-const answerEl = document.getElementById('answer')
-const showAnswerBtn = document.getElementById('show-answer-btn')
-const correctBtn = document.getElementById('correct-btn')
-const wrongBtn = document.getElementById('wrong-btn')
-
-// === Globale Variablen ===
-let currentUser = null
-let currentIndex = 0
-let currentWords = []
-let currentLevelId = null
-
-// === Debug Helper ===
-function log(...args) {
-  console.log('[DEBUG]', ...args)
+// ===========================
+// Auth Functions
+// ===========================
+async function checkAuth() {
+  const { data } = await supabase.auth.getUser()
+  if (data.user) {
+    currentUser = data.user
+    showMainApp()
+  } else {
+    showAuthScreen()
+  }
 }
 
-// === Auth ===
-loginBtn.onclick = async () => {
-  const email = document.getElementById('email').value
-  const password = document.getElementById('password').value
+function showAuthScreen() {
+  authContainer.classList.remove('hidden')
+  appContainer.classList.add('hidden')
+}
+
+function showMainApp() {
+  authContainer.classList.add('hidden')
+  appContainer.classList.remove('hidden')
+  document.getElementById('user-email').textContent = currentUser.email
+  if (isAdmin()) {
+    document.getElementById('admin-badge').classList.remove('hidden')
+  } else {
+    document.getElementById('admin-badge').classList.add('hidden')
+  }
+  loadLevels()
+}
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const email = document.getElementById('login-email').value.trim().toLowerCase()
+  const password = document.getElementById('login-password').value
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) alert(error.message)
-  else handleLogin(data.user)
-}
+  if (error) {
+    showAuthError('login', error.message)
+  } else {
+    currentUser = data.user
+    showMainApp()
+  }
+})
 
-signupBtn.onclick = async () => {
-  const email = document.getElementById('email').value
-  const password = document.getElementById('password').value
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const email = document.getElementById('register-email').value.trim().toLowerCase()
+  const password = document.getElementById('register-password').value
+  const confirmPassword = document.getElementById('register-confirm').value
+  if (password !== confirmPassword) {
+    showAuthError('register', 'Passwords do not match.')
+    return
+  }
+  if (password.length < 6) {
+    showAuthError('register', 'Password must be at least 6 characters.')
+    return
+  }
   const { data, error } = await supabase.auth.signUp({ email, password })
-  if (error) alert(error.message)
-  else alert('Registrierung erfolgreich. Bitte einloggen.')
-}
+  if (error) {
+    showAuthError('register', error.message)
+  } else {
+    alert("Registration successful! Please log in.")
+    showLoginForm()
+  }
+})
 
 logoutBtn.onclick = async () => {
   await supabase.auth.signOut()
   currentUser = null
-  currentLevelId = null
-
-  // Ansicht zurücksetzen
-  showView('login')
-
-  // Inhalte löschen
-  questionEl.textContent = ''
-  answerEl.textContent = ''
-  answerEl.style.display = 'none'
-
-  localStorage.removeItem('view')
-  localStorage.removeItem('levelId')
+  showAuthScreen()
 }
 
-function handleLogin(user) {
-  currentUser = user
-  showView('levels')
-  loadLevels()
+function showAuthError(formType, message) {
+  const errorElement = document.getElementById(`${formType}-error`)
+  errorElement.textContent = message
+  errorElement.classList.remove('hidden')
 }
 
-// === Views umschalten ===
-function showView(view) {
-  authContainer.style.display = 'none'
-  appContainer.style.display = 'none'
-  gameContainer.style.display = 'none'
-
-  if (view === 'login') authContainer.style.display = 'block'
-  if (view === 'levels') appContainer.style.display = 'block'
-  if (view === 'game') gameContainer.style.display = 'block'
-
-  localStorage.setItem('view', view)
+function showLoginForm() {
+  loginForm.classList.remove('hidden')
+  registerForm.classList.add('hidden')
+  clearAuthErrors()
 }
 
-// === Levels laden ===
+function showRegisterForm() {
+  loginForm.classList.add('hidden')
+  registerForm.classList.remove('hidden')
+  clearAuthErrors()
+}
+
+function clearAuthErrors() {
+  document.getElementById('login-error').classList.add('hidden')
+  document.getElementById('register-error').classList.add('hidden')
+}
+
+function isAdmin() {
+  return currentUser && currentUser.email === ADMIN_EMAIL
+}
+
+function requireAdmin() {
+  if (!isAdmin()) {
+    alert('This feature is only available to administrators.')
+    return false
+  }
+  return true
+}
+
+// ===========================
+// Levels & Words from Supabase
+// ===========================
 async function loadLevels() {
-  const { data: levels, error } = await supabase.from('levels').select('*')
+  const { data, error } = await supabase.from('levels').select('id, name')
   if (error) {
-    console.error(error)
+    alert("Error loading levels")
     return
   }
-
-  const app = document.getElementById('app')
-  app.innerHTML = ''
-  levels.forEach(level => {
-    const btn = document.createElement('button')
-    btn.textContent = level.name
-    btn.onclick = () => startLevel(level.id)
-    app.appendChild(btn)
-  })
+  levels = data
+  renderLevels()
+  updateModeCounts()
+  updateOverallProgress()
 }
 
-// === Lernmodus starten ===
-async function startLevel(levelId) {
-  log('startLevel()', { levelId })
-  currentLevelId = levelId
-  localStorage.setItem('levelId', levelId)
+async function getWordsInLevel(levelId) {
+  const { data, error } = await supabase.from('words').select('*').eq('level_id', levelId)
+  return data || []
+}
 
-  // Wörter laden
-  const { data: words, error: wordsError } = await supabase
-    .from('words')
+async function getAllWords() {
+  const { data, error } = await supabase.from('words').select('*')
+  return data || []
+}
+
+// ===========================
+// Progress Functions (Supabase)
+// ===========================
+async function getWordProgress(wordId) {
+  const { data } = await supabase
+    .from('progress')
     .select('*')
-    .eq('level_id', levelId)
-
-  if (wordsError) {
-    console.error(wordsError)
-    alert('Fehler beim Laden der Wörter: ' + wordsError.message)
-    return
-  }
-  log('words loaded', { count: words?.length })
-
-  // Fortschritt laden
-  const { data: progressData, error: progressError } = await supabase
-    .from('progress')
-    .select('word_id, status')
     .eq('user_id', currentUser.id)
-
-  if (progressError) {
-    console.error(progressError)
-    alert('Fehler beim Laden des Fortschritts: ' + progressError.message)
-    return
-  }
-  log('progress loaded', { count: progressData?.length })
-
-  // Wörter filtern
-  const filteredWords = (words || []).filter(w => {
-    const p = (progressData || []).find(pr => pr.word_id === w.id)
-    return !p || p.status === 'wrong'
-  })
-
-  log('filteredWords', { count: filteredWords.length })
-
-  if (!filteredWords.length) {
-    showView('levels')
-    const app = document.getElementById('app')
-    app.innerHTML = `<p>🎉 Alle Wörter in diesem Level sind gelernt!</p>`
-    return
-  }
-
-  // Shuffle
-  currentIndex = 0
-  currentWords = filteredWords.sort(() => Math.random() - 0.5)
-
-  showView('game')
-  showWord()
-}
-
-// === Wort anzeigen ===
-function showWord() {
-  log('showWord()', { currentIndex, total: currentWords.length })
-
-  if (currentIndex >= currentWords.length) {
-    alert('🎉 Level abgeschlossen!')
-    showView('levels')
-    return
-  }
-
-  const word = currentWords[currentIndex]
-  if (!word) {
-    log('showWord: word ist undefined bei Index', currentIndex)
-    return
-  }
-
-  log('zeige Wort', word)
-
-  questionEl.textContent = word.term ?? '(ohne term)'
-  answerEl.textContent = word.translation ?? '(ohne translation)'
-
-  // Reset Sichtbarkeit
-  answerEl.style.display = 'none'
-  correctBtn.style.display = 'none'
-  wrongBtn.style.display = 'none'
-  showAnswerBtn.style.display = 'inline-block'
-
-  // 👉 Animation triggern
-  const card = document.getElementById('question-card')
-  if (card) {
-    card.style.animation = 'none'
-    void card.offsetWidth // reflow trick
-    card.style.animation = 'slideIn 0.4s ease'
-  }
-
-  // Button-Events
-  showAnswerBtn.onclick = () => {
-    answerEl.style.display = 'block'
-    correctBtn.style.display = 'inline-block'
-    wrongBtn.style.display = 'inline-block'
-    showAnswerBtn.style.display = 'none'
-  }
-
-  correctBtn.onclick = async () => {
-    await handleAnswer(word, true)
-    currentIndex++
-    showWord()
-  }
-
-  wrongBtn.onclick = async () => {
-    await handleAnswer(word, false)
-    currentIndex++
-    showWord()
-  }
-}
-
-// === Antwort speichern ===
-async function handleAnswer(word, isCorrect) {
-  const payload = {
+    .eq('word_id', wordId)
+    .maybeSingle()
+  return data || {
     user_id: currentUser.id,
-    word_id: word.id,
-    status: isCorrect ? 'correct' : 'wrong',
-    last_review: new Date().toISOString()
-  }
-
-  const { error } = await supabase
-    .from('progress')
-    .upsert(payload, { onConflict: 'user_id,word_id' })
-
-  if (error) {
-    console.error('progress upsert error', error)
-    alert('Konnte Fortschritt nicht speichern: ' + error.message)
-  } else {
-    log('progress saved', payload)
+    word_id: wordId,
+    correct_count: 0,
+    wrong_count: 0,
+    current_step: 0,
+    level: 0,
+    is_learned: false
   }
 }
 
-// === Session prüfen & View wiederherstellen ===
-supabase.auth.getSession().then(({ data }) => {
-  if (data.session) {
-    handleLogin(data.session.user)
-
-    // Letzte Ansicht wiederherstellen
-    const lastView = localStorage.getItem('view')
-    const lastLevel = localStorage.getItem('levelId')
-
-    if (lastView === 'game' && lastLevel) {
-      startLevel(lastLevel)
-    } else if (lastView === 'levels') {
-      showView('levels')
+async function updateWordProgress(word, isCorrect) {
+  let progress = await getWordProgress(word.id)
+  progress.last_review = new Date().toISOString()
+  if (isCorrect) {
+    progress.correct_count++
+    if (progress.current_step >= 4) {
+      progress.level = Math.min(progress.level + 1, SRS_INTERVALS.length - 1)
+      const daysToAdd = SRS_INTERVALS[progress.level]
+      progress.next_review = new Date(Date.now() + daysToAdd * 86400000).toISOString()
+      progress.is_learned = true
     } else {
-      showView('levels')
+      progress.current_step++
     }
   } else {
-    showView('login')
+    progress.wrong_count++
+    if (progress.is_learned) {
+      progress.level = Math.max(0, progress.level - 1)
+      const daysToAdd = SRS_INTERVALS[progress.level]
+      progress.next_review = new Date(Date.now() + daysToAdd * 86400000).toISOString()
+    }
   }
-})
+  await supabase.from('progress').upsert(progress)
+}
 
-supabase.auth.onAuthStateChange((_event, session) => {
-  if (session) handleLogin(session.user)
-  else showView('login')
-})
+async function getWordsForReview() {
+  const { data: progress } = await supabase
+    .from('progress')
+    .select('word_id, next_review')
+    .eq('user_id', currentUser.id)
+  const dueIds = (progress || [])
+    .filter(p => p.next_review && new Date(p.next_review) <= new Date())
+    .map(p => p.word_id)
+  if (dueIds.length === 0) return []
+  const { data: words } = await supabase.from('words').select('*').in('id', dueIds)
+  return words || []
+}
 
-console.log('main.js geladen, alles bereit ✅')
+async function getDifficultWords() {
+  const { data: progress } = await supabase
+    .from('progress')
+    .select('word_id, wrong_count')
+    .eq('user_id', currentUser.id)
+  const difficultIds = (progress || [])
+    .filter(p => p.wrong_count >= DIFFICULT_THRESHOLD)
+    .map(p => p.word_id)
+  if (difficultIds.length === 0) return []
+  const { data: words } = await supabase.from('words').select('*').in('id', difficultIds)
+  return words || []
+}
+
+async function getNewWordsInLevel(levelId) {
+  const words = await getWordsInLevel(levelId)
+  const newWords = []
+  for (const word of words) {
+    const progress = await getWordProgress(word.id)
+    if (!progress.is_learned && progress.current_step === 0) {
+      newWords.push(word)
+    }
+  }
+  return newWords
+}
+
+// ===========================
+// UI Rendering
+// ===========================
+async function renderLevels() {
+  const levelGrid = document.getElementById('level-grid')
+  levelGrid.innerHTML = ''
+  for (const level of levels) {
+    const newWords = await getNewWordsInLevel(level.id)
+    const levelProgress = await getLevelProgress(level.id)
+    const isCompleted = levelProgress.completed === levelProgress.total
+    const levelItem = document.createElement('div')
+    levelItem.className = `level-item`
+    if (newWords.length > 0) {
+      levelItem.onclick = () => startNewWordsMode(level.id)
+    }
+    levelItem.innerHTML = `
+      <div class="level-icon ${isCompleted ? 'completed' : ''}">
+        <span class="level-number">${level.id}</span>
+      </div>
+      <div class="level-name">${level.name}</div>
+      <div class="level-progress">${levelProgress.completed}/${levelProgress.total}</div>
+      ${newWords.length > 0 ? `<div class="level-new-words">${newWords.length} new words</div>` : '<div class="level-new-words">All learned</div>'}
+    `
+    levelGrid.appendChild(levelItem)
+  }
+}
+
+async function getLevelProgress(levelId) {
+  const words = await getWordsInLevel(levelId)
+  let completed = 0
+  for (const word of words) {
+    const progress = await getWordProgress(word.id)
+    if (progress.is_learned) completed++
+  }
+  return { completed, total: words.length }
+}
+
+async function updateModeCounts() {
+  const reviewWords = await getWordsForReview()
+  const reviewCount = document.getElementById('review-count')
+  const reviewMode = document.getElementById('review-mode')
+  if (reviewWords.length > 0) {
+    reviewCount.textContent = `${reviewWords.length} words`
+    reviewCount.classList.remove('zero')
+    reviewMode.classList.remove('disabled')
+  } else {
+    reviewCount.textContent = 'No words due'
+    reviewCount.classList.add('zero')
+    reviewMode.classList.add('disabled')
+  }
+  const difficultWords = await getDifficultWords()
+  const difficultCount = document.getElementById('difficult-count')
+  const difficultMode = document.getElementById('difficult-mode')
+  if (difficultWords.length > 0) {
+    difficultCount.textContent = `${difficultWords.length} words`
+    difficultCount.classList.remove('zero')
+    difficultMode.classList.remove('disabled')
+  } else {
+    difficultCount.textContent = 'No difficult words'
+    difficultCount.classList.add('zero')
+    difficultMode.classList.add('disabled')
+  }
+}
+
+async function updateOverallProgress() {
+  let totalWords = 0
+  let learnedCount = 0
+  for (const level of levels) {
+    const words = await getWordsInLevel(level.id)
+    totalWords += words.length
+    for (const word of words) {
+      const progress = await getWordProgress(word.id)
+      if (progress.is_learned) learnedCount++
+    }
+  }
+  document.getElementById('words-learned-count').textContent = learnedCount
+  document.getElementById('total-words-count').textContent = totalWords
+  const percentage = totalWords > 0 ? (learnedCount / totalWords) * 100 : 0
+  document.getElementById('progress').style.width = percentage + '%'
+}
+
+// ===========================
+// Learning Modes
+// ===========================
+async function startNewWordsMode(levelId) {
+  currentLearningMode = 'new'
+  currentLevelId = levelId
+  const newWords = await getNewWordsInLevel(levelId)
+  if (newWords.length === 0) {
+    alert('No new words to learn in this level!')
+    return
+  }
+  sessionWords = newWords.slice(0, Math.min(10, newWords.length))
+  sessionIndex = 0
+  sessionStats = { correct: 0, wrong: 0 }
+  levelSelection.classList.add('hidden')
+  learningScreen.classList.remove('hidden')
+  document.getElementById('current-mode-name').textContent = `Level ${levelId} - New Words`
+  updateSessionProgress()
+  showStep()
+}
+
+async function startReviewMode() {
+  const reviewWords = await getWordsForReview()
+  if (reviewWords.length === 0) {
+    alert('No words due for review!')
+    return
+  }
+  currentLearningMode = 'review'
+  currentLevelId = null
+  sessionWords = reviewWords.slice(0, Math.min(20, reviewWords.length))
+  sessionIndex = 0
+  sessionStats = { correct: 0, wrong: 0 }
+  levelSelection.classList.add('hidden')
+  learningScreen.classList.remove('hidden')
+  document.getElementById('current-mode-name').textContent = 'Review Session'
+  updateSessionProgress()
+  showStep()
+}
+
+async function startDifficultMode() {
+  const difficultWords = await getDifficultWords()
+  if (difficultWords.length === 0) {
+    alert('No difficult words to practice!')
+    return
+  }
+  currentLearningMode = 'difficult'
+  currentLevelId = null
+  sessionWords = difficultWords.slice(0, Math.min(15, difficultWords.length))
+  sessionIndex = 0
+  sessionStats = { correct: 0, wrong: 0 }
+  levelSelection.classList.add('hidden')
+  learningScreen.classList.remove('hidden')
+  document.getElementById('current-mode-name').textContent = 'Difficult Words'
+  updateSessionProgress()
+  showStep()
+}
+
+function updateSessionProgress() {
+  document.getElementById('current-word-number').textContent = sessionIndex + 1
+  document.getElementById('total-session-words').textContent = sessionWords.length
+}
+
+function getCurrentWord() {
+  if (sessionIndex >= sessionWords.length) return null
+  return sessionWords[sessionIndex]
+}
+
+function nextSessionWord() {
+  sessionIndex++
+  updateSessionProgress()
+  if (sessionIndex >= sessionWords.length) {
+    showSessionComplete()
+  } else {
+    showStep()
+  }
+}
+
+function showSessionComplete() {
+  const stepContent = document.getElementById('step-content')
+  const accuracy = sessionStats.correct + sessionStats.wrong > 0
+    ? Math.round((sessionStats.correct / (sessionStats.correct + sessionStats.wrong)) * 100)
+    : 0
+  stepContent.innerHTML = `
+    <div class="session-complete">
+      <div class="session-complete-icon">🎉</div>
+      <h2>Session Complete!</h2>
+      <p>Great job! You've completed your ${currentLearningMode} session.</p>
+      <div class="session-stats">
+        <div class="stat-item"><span class="stat-number">${sessionStats.correct}</span><div class="stat-label">Correct</div></div>
+        <div class="stat-item"><span class="stat-number">${sessionStats.wrong}</span><div class="stat-label">Wrong</div></div>
+        <div class="stat-item"><span class="stat-number">${accuracy}%</span><div class="stat-label">Accuracy</div></div>
+        <div class="stat-item"><span class="stat-number">${sessionWords.length}</span><div class="stat-label">Words Practiced</div></div>
+      </div>
+      <button class="continue-btn" onclick="backToLevels()">Continue Learning</button>
+    </div>
+  `
+}
+
+function backToLevels() {
+  showLevelSelection()
+}
+
+function showLevelSelection() {
+  levelSelection.classList.remove('hidden')
+  learningScreen.classList.add('hidden')
+  renderLevels()
+  updateModeCounts()
+  updateOverallProgress()
+}
+
+// ===========================
+// Learning Steps UI (5 steps)
+// ===========================
+async function showStep() {
+  const stepContent = document.getElementById('step-content')
+  const word = getCurrentWord()
+  if (!word) {
+    showSessionComplete()
+    return
+  }
+  const progress = await getWordProgress(word.id)
+  let currentStep = progress.current_step
+  // For review/difficult: random step
+  if (currentLearningMode === 'review' || currentLearningMode === 'difficult') {
+    currentStep = Math.floor(Math.random() * 5) // 0-4
+  }
+  // Step 0: Introduction
+  if (currentStep === 0) {
+    stepContent.innerHTML = `
+      <div class="word-introduction">
+        <div class="language-label">ENGLISH</div>
+        <div class="main-word">${word.term}</div>
+        <div class="translation-section">
+          <div class="language-label">SISWATI</div>
+          <div class="translation">${word.translation}</div>
+        </div>
+        <button class="next-button" onclick="nextStep()">Next</button>
+      </div>
+    `
+    return
+  }
+  // Step 1: Multiple Choice
+  if (currentStep === 1) {
+    const options = await getMultipleChoiceOptions(word.translation)
+    stepContent.innerHTML = `
+      <div class="multiple-choice-section">
+        <div class="question-header">Pick the correct answer</div>
+        <div class="question-text">${word.term}</div>
+        <div class="choices-grid">
+          ${options.map((option, index) =>
+            {
+              return `<button class="choice-button" onclick="checkChoice('${option}', '${word.translation}', 1)">
+              <span class="choice-number">${index + 1}</span>
+              <span class="choice-text">${option}</span>
+            </button>`
+            }
+          ).join('')}
+        </div>
+        <div id="feedback" class="feedback hidden"></div>
+      </div>
+    `
+    return
+  }
+  // Step 2: Audio Choice (not implemented, fallback to next step)
+  if (currentStep === 2) {
+    stepContent.innerHTML = `
+      <div class="audio-choice-section">
+        <div class="question-header">Choose the translation for what you hear</div>
+        <div class="question-text">${word.term}</div>
+        <button class="next-button" onclick="nextStep()">Skip (Audio not implemented)</button>
+      </div>
+    `
+    return
+  }
+  // Step 3: Input
+  if (currentStep === 3) {
+    stepContent.innerHTML = `
+      <div class="input-section">
+        <div class="question-text">Type the siSwati word for "${word.term}":</div>
+        <input type="text" class="text-input" id="user-input" placeholder="Type here..." onkeypress="handleEnter(event)">
+        <br>
+        <button class="submit-button" onclick="checkInput(3)">Check</button>
+        <div id="feedback" class="feedback hidden"></div>
+      </div>
+    `
+    setTimeout(() => {
+      document.getElementById('user-input').focus()
+    }, 100)
+    return
+  }
+  // Step 4: Typing
+  if (currentStep === 4) {
+    stepContent.innerHTML = `
+      <div class="typing-section">
+        <div class="typing-header">Type the correct translation</div>
+        <div class="english-word">${word.term}</div>
+        <div class="language-indicator">SISWATI</div>
+        <div class="typing-input-container">
+          <input type="text" class="typing-input" id="typing-input" placeholder="" onkeypress="handleTypingEnter(event)">
+        </div>
+        <div id="typing-feedback" class="typing-feedback hidden"></div>
+        <div id="next-button-container" class="next-button-container hidden">
+          <button class="next-button-small" onclick="nextStep()">Next ▶</button>
+        </div>
+      </div>
+    `
+    setTimeout(() => {
+      document.getElementById('typing-input').focus()
+    }, 100)
+    return
+  }
+}
+
+// ===========================
+// Utility Functions
+// ===========================
+function shuffle(array) {
+  const newArray = [...array]
+  for (let i = newArray.length - 1; i > 0; i--) {
+    var swapIndex = Math.floor(Math.random() * (i + 1))
+    if (typeof newArray[i] === 'undefined' || typeof newArray[swapIndex] === 'undefined') continue
+    [newArray[i], newArray[swapIndex]] = [newArray[swapIndex], newArray[i]]
+  }
+  return newArray
+}
+
+async function getMultipleChoiceOptions(correct) {
+  const allWords = await getAllWords()
+  const wrongAnswers = []
+  while (wrongAnswers.length < 3) {
+    const randomWord = allWords[Math.floor(Math.random() * allWords.length)]
+    if (
+      randomWord &&
+      randomWord.translation &&
+      randomWord.translation !== correct &&
+      !wrongAnswers.includes(randomWord.translation)
+    ) {
+      wrongAnswers.push(randomWord.translation)
+    }
+    if (wrongAnswers.length > 10) break // Prevent infinite loop
+  }
+  // Filter out undefined values before shuffling
+  const options = [correct, ...wrongAnswers].filter(Boolean)
+  return shuffle(options)
+}
+
+// ===========================
+// Step Handlers
+// ===========================
+async function nextStep() {
+  const word = getCurrentWord()
+  const progress = await getWordProgress(word.id)
+  if (progress.current_step < 4) {
+    progress.current_step++
+    await supabase.from('progress').upsert(progress)
+    showStep()
+  } else {
+    nextSessionWord()
+  }
+}
+window.nextStep = nextStep
+
+async function checkChoice(selected, correct, stepNumber) {
+  const isCorrect = selected === correct
+  const word = getCurrentWord()
+  if (isCorrect) sessionStats.correct++
+  else sessionStats.wrong++
+  await updateWordProgress(word, isCorrect)
+  setTimeout(() => nextStep(), 1000)
+}
+window.checkChoice = checkChoice
+
+async function checkInput(stepNumber) {
+  const word = getCurrentWord()
+  const userInput = document.getElementById('user-input').value.trim().toLowerCase()
+  const correct = word.translation.toLowerCase()
+  const isCorrect = userInput === correct
+  if (isCorrect) sessionStats.correct++
+  else sessionStats.wrong++
+  await updateWordProgress(word, isCorrect)
+  setTimeout(() => nextStep(), 1000)
+}
+window.checkInput = checkInput
+
+function handleEnter(event) {
+  if (event.key === 'Enter') {
+    checkInput(3)
+  }
+}
+window.handleEnter = handleEnter
+
+function handleTypingEnter(event) {
+  if (event.key === 'Enter') {
+    const word = getCurrentWord()
+    const userInput = document.getElementById('typing-input').value.trim().toLowerCase()
+    const correct = word.translation.toLowerCase()
+    const isCorrect = userInput === correct
+    if (isCorrect) sessionStats.correct++
+    else sessionStats.wrong++
+    updateWordProgress(word, isCorrect)
+    setTimeout(() => nextStep(), 1000)
+  }
+}
+window.handleTypingEnter = handleTypingEnter
+
+window.backToLevels = backToLevels
+window.handleLogout = async function() {
+  await supabase.auth.signOut()
+  currentUser = null
+  showAuthScreen()
+}
+
+// ===========================
+// Init
+// ===========================
+document.addEventListener('DOMContentLoaded', function () {
+  checkAuth()
+})
