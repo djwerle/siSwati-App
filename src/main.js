@@ -455,96 +455,185 @@ async function showStep() {
     showSessionComplete()
     return
   }
+
   const progress = await getWordProgress(word.id)
   let currentStep = progress.current_step
-  // For review/difficult: random step
+
+  // Für Review/Difficult Mode: zufälliger Schritt
   if (currentLearningMode === 'review' || currentLearningMode === 'difficult') {
-    currentStep = Math.floor(Math.random() * 5) // 0-4
+    currentStep = Math.floor(Math.random() * 5) // 0–4
   }
-  // Step 0: Introduction
+
+  // ===== STEP 0: Einführung (Englisch + siSwati + Auto-Audio) =====
   if (currentStep === 0) {
     stepContent.innerHTML = `
       <div class="word-introduction">
         <div class="language-label">ENGLISH</div>
         <div class="main-word">${word.term}</div>
+
         <div class="translation-section">
           <div class="language-label">SISWATI</div>
           <div class="translation">${word.translation}</div>
         </div>
-        <button class="next-button" onclick="nextStep()">Next</button>
+
+        <div class="audio-section">
+          <button class="audio-button" onclick="playAudio('${word.audio_url}')">🔊</button>
+        </div>
+
+        <button class="next-button" onclick="nextStep()">Next ▶</button>
       </div>
     `
+    // Audio automatisch abspielen
+    if (word.audio_url) {
+      setTimeout(() => playAudio(word.audio_url), 800)
+    }
     return
   }
-  // Step 1: Multiple Choice
+
+  // ===== STEP 1: Multiple Choice (Text) =====
   if (currentStep === 1) {
     const options = await getMultipleChoiceOptions(word.translation)
     stepContent.innerHTML = `
       <div class="multiple-choice-section">
         <div class="question-header">Pick the correct answer</div>
         <div class="question-text">${word.term}</div>
-      <div class="choices-grid">
-          ${options.map((option, index) => {
-      return `<button class="choice-button" onclick="checkChoice('${option}', '${word.translation}', 1)">
+        <div class="choices-grid">
+          ${options.map((option, index) => `
+            <button class="choice-button" 
+              onclick="checkChoice('${option}', '${word.translation}', 1)">
               <span class="choice-number">${index + 1}</span>
               <span class="choice-text">${option}</span>
-            </button>`
-    }
-    ).join('')}
+            </button>
+          `).join('')}
         </div>
         <div id="feedback" class="feedback hidden"></div>
       </div>
     `
     return
   }
-  // Step 2: Audio Choice (not implemented, fallback to next step)
-  if (currentStep === 2) {
-    stepContent.innerHTML = `
-      <div class="audio-choice-section">
-        <div class="question-header">Choose the translation for what you hear</div>
-        <div class="question-text">${word.term}</div>
-        <button class="next-button" onclick="nextStep()">Skip (Audio not implemented)</button>
-    </div>
-    `
+
+  // Step 2: Audio Multiple Choice
+if (currentStep === 2) {
+  const hasAudio = word.audio_url && word.audio_url.trim() !== ""
+
+  if (!hasAudio) {
+    // Falls kein Audio vorhanden -> direkt weiterspringen
+    nextStep()
     return
   }
-  // Step 3: Input
+
+  // Erzeuge Antwortoptionen (korrekt + 3 falsche)
+  const options = await getMultipleChoiceOptions(word.term)
+
+  stepContent.innerHTML = `
+    <div class="audio-choice-section">
+      <div class="question-header">Choose the translation for what you hear</div>
+      
+      <div class="audio-player-section">
+        <button class="large-audio-button" onclick="playAudio('${word.audio_url}')">🔊 Play</button>
+      </div>
+
+      <div class="choices-grid">
+        ${options.map((option, index) => 
+          `<button class="choice-button" onclick="checkAudioChoice('${option}', '${word.term}', 2)">
+            <span class="choice-number">${index + 1}</span>
+            <span class="choice-text">${option}</span>
+          </button>`
+        ).join('')}
+      </div>
+
+      <div id="feedback" class="feedback hidden"></div>
+    </div>
+  `
+
+  // Audio automatisch abspielen nach 500ms
+  setTimeout(() => {
+    playAudio(word.audio_url)
+  }, 500)
+  return
+}
+
+
+  // ===== STEP 3: Input (kurze Eingabe) =====
   if (currentStep === 3) {
     stepContent.innerHTML = `
-    <div class="input-section">
+      <div class="input-section">
         <div class="question-text">Type the siSwati word for "${word.term}":</div>
         <input type="text" class="text-input" id="user-input" placeholder="Type here..." onkeypress="handleEnter(event)">
-        <br>
         <button class="submit-button" onclick="checkInput(3)">Check</button>
         <div id="feedback" class="feedback hidden"></div>
-    </div>
+      </div>
     `
-    setTimeout(() => {
-      document.getElementById('user-input').focus()
-    }, 100)
+    setTimeout(() => document.getElementById('user-input').focus(), 100)
     return
   }
-  // Step 4: Typing
+
+  // ===== STEP 4: Typing mit Letter-Hints =====
   if (currentStep === 4) {
     stepContent.innerHTML = `
-    <div class="typing-section">
+      <div class="typing-section">
         <div class="typing-header">Type the correct translation</div>
         <div class="english-word">${word.term}</div>
         <div class="language-indicator">SISWATI</div>
-      <div class="typing-input-container">
-          <input type="text" class="typing-input" id="typing-input" placeholder="" onkeypress="handleTypingEnter(event)">
+
+        <div class="typing-input-container">
+          <input type="text" class="typing-input" id="typing-input" placeholder="" 
+            onkeypress="handleTypingEnter(event)">
         </div>
+
+        <div class="letter-hints">${generateLetterHints(word.translation)}</div>
+
         <div id="typing-feedback" class="typing-feedback hidden"></div>
+        <div id="wrong-answer-display" class="wrong-answer-display hidden"></div>
+
         <div id="next-button-container" class="next-button-container hidden">
           <button class="next-button-small" onclick="nextStep()">Next ▶</button>
         </div>
       </div>
     `
-    setTimeout(() => {
-      document.getElementById('typing-input').focus()
-    }, 100)
+    setTimeout(() => document.getElementById('typing-input').focus(), 100)
     return
   }
+}
+
+// ================== FEEDBACK SYSTEM ==================
+
+function showCorrectFeedback() {
+  const container = document.getElementById('feedback-container')
+  const message = document.getElementById('feedback-message')
+
+  container.classList.remove('hidden')
+  message.className = 'correct-feedback'
+  message.textContent = '✅ Correct!'
+
+  // Automatisch weiter nach 1.5 Sekunden
+  setTimeout(() => {
+    container.classList.add('hidden')
+    nextStep()
+  }, 1500)
+}
+
+function showWrongFeedback(userAnswer, correctAnswer, englishTerm) {
+  const container = document.getElementById('feedback-container')
+  const message = document.getElementById('feedback-message')
+
+  container.classList.remove('hidden')
+  message.className = 'wrong-feedback'
+  message.innerHTML = `
+    <div class="your-answer">YOUR ANSWER: <b>${userAnswer}</b></div>
+    <div class="correct-answer">
+      <div class="lang-label">SISWATI</div>
+      <div class="answer">${correctAnswer}</div>
+    </div>
+    <div class="english-hint">(${englishTerm})</div>
+    <button class="next-button" onclick="hideFeedbackAndNext()">Next ▶</button>
+  `
+}
+
+function hideFeedbackAndNext() {
+  const container = document.getElementById('feedback-container')
+  container.classList.add('hidden')
+  nextStep()
 }
 
 // ===========================
@@ -596,27 +685,94 @@ async function nextStep() {
 }
 window.nextStep = nextStep
 
+// Multiple Choice
 async function checkChoice(selected, correct, stepNumber) {
-  const isCorrect = selected === correct
   const word = getCurrentWord()
-  if (isCorrect) sessionStats.correct++
-  else sessionStats.wrong++
-  await updateWordProgress(word, isCorrect)
-  setTimeout(() => nextStep(), 1000)
+  const isCorrect = selected === correct
+
+  if (isCorrect) {
+    sessionStats.correct++
+    await updateWordProgress(word, true)
+    showCorrectFeedback() // ✅ Grüner Button oben rechts
+  } else {
+    sessionStats.wrong++
+    await updateWordProgress(word, false)
+    showWrongFeedback(selected, correct, word.term) // ❌ Rotes Feld mit YOUR ANSWER etc.
+  }
 }
 window.checkChoice = checkChoice
 
+// Texteingabe
 async function checkInput(stepNumber) {
   const word = getCurrentWord()
   const userInput = document.getElementById('user-input').value.trim().toLowerCase()
   const correct = word.translation.toLowerCase()
   const isCorrect = userInput === correct
-  if (isCorrect) sessionStats.correct++
-  else sessionStats.wrong++
-  await updateWordProgress(word, isCorrect)
-  setTimeout(() => nextStep(), 1000)
+
+  if (isCorrect) {
+    sessionStats.correct++
+    await updateWordProgress(word, true)
+    showCorrectFeedback()
+  } else {
+    sessionStats.wrong++
+    await updateWordProgress(word, false)
+    showWrongFeedback(userInput, word.translation, word.term)
+  }
 }
 window.checkInput = checkInput
+
+// ===================== Audio Multiple Choice =====================
+async function checkAudioChoice(selected, correct, stepNumber) {
+  const word = getCurrentWord()
+  const feedbackContainer = document.getElementById('feedback-container')
+  const feedbackMessage = document.getElementById('feedback-message')
+
+  const isCorrect = selected === correct
+
+  if (isCorrect) {
+    sessionStats.correct++
+    await updateWordProgress(word, true)
+
+    // ✅ Grüner Feedback-Button
+    feedbackMessage.innerHTML = `<div class="feedback-correct">✅ Correct!</div>`
+    feedbackContainer.classList.remove('hidden')
+
+    // nach 1.5s automatisch weiter
+    setTimeout(() => {
+      feedbackContainer.classList.add('hidden')
+      nextStep()
+    }, 1500)
+  } else {
+    sessionStats.wrong++
+    await updateWordProgress(word, false)
+
+    // ❌ Rotes Feedback mit korrekter Antwort
+    feedbackMessage.innerHTML = `
+      <div class="feedback-wrong">
+        <div class="your-answer">YOUR ANSWER:<br>${selected}</div>
+        <div class="correct-answer">
+          <div class="label">SISWATI</div>
+          <div class="word">${correct}</div>
+          <div class="label">ENGLISH</div>
+          <div class="word">${word.term}</div>
+        </div>
+        <div class="next-button-container">
+          <button class="next-button-small" onclick="nextStep()">Next ▶</button>
+        </div>
+      </div>
+    `
+    feedbackContainer.classList.remove('hidden')
+  }
+}
+window.checkAudioChoice = checkAudioChoice
+
+function playAudio(audioUrl) {
+  if (!audioUrl) return
+  const audio = new Audio(audioUrl)
+  audio.play().catch(err => console.warn("Audio play failed:", err))
+}
+window.playAudio = playAudio
+
 
 function handleEnter(event) {
   if (event.key === 'Enter') {
