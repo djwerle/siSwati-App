@@ -249,36 +249,50 @@ async function getNewWordsInLevel(levelId) {
 // ===========================
 // UI Rendering
 // ===========================
+// Holt alle Level in einem Request + baut die Karteikarten
 async function renderLevels() {
   const levelGrid = document.getElementById('level-grid')
-  levelGrid.innerHTML = ''
+  levelGrid.innerHTML = '<div class="loading">Loading levels…</div>'
 
-  for (const level of levels) {
-    // Hole die neuen Wörter und den Fortschritt anhand der level.id (nicht level_name/UUID-String)
-    const newWords = await getNewWordsInLevel(level.id)
-    const levelProgress = await getLevelProgress(level.id)
-    const isCompleted = levelProgress.completed === levelProgress.total
+  const { data, error } = await supabase.rpc('get_level_overview')
+  if (error) {
+    console.error('[get_level_overview] error', error)
+    levelGrid.innerHTML = '<div class="error">Could not load levels.</div>'
+    return
+  }
+
+  levelGrid.innerHTML = '' // leeren, nachdem Daten da sind
+
+  data.forEach((row, index) => {
+    const isCompleted = row.total_words > 0 && row.learned_words === row.total_words
 
     const levelItem = document.createElement('div')
-    levelItem.className = `level-item`
-
-    if (newWords.length > 0) {
-      levelItem.onclick = () => startNewWordsMode(level.id)
-    }
+    levelItem.className = `level-item ${isCompleted ? 'completed' : ''}`
+    levelItem.onclick = () => startNewWordsMode(row.level_id, row.level_name) // ← UUID bleibt für den Start wichtig
 
     levelItem.innerHTML = `
       <div class="level-icon ${isCompleted ? 'completed' : ''}">
-        <span class="level-number"></span> <!-- hier absichtlich leer -->
+        <span class="level-number">
+          ${isCompleted ? '✅' : 'Level ' + (index + 1)}
+        </span>
       </div>
-      <div class="level-name">${level.name || ''}</div>
-      <div class="level-progress">${levelProgress.completed}/${levelProgress.total}</div>
-      ${newWords.length > 0
-        ? `<div class="level-new-words">${newWords.length} new words</div>`
+      <div class="level-name">
+        ${row.level_name && !row.level_name.startsWith('860a') ? row.level_name : ''}
+      </div>
+      <div class="level-progress">${row.learned_words}/${row.total_words}</div>
+      ${row.new_words > 0
+        ? `<div class="level-new-words">${row.new_words} new words</div>`
         : '<div class="level-new-words">All learned</div>'}
+      ${row.due_reviews > 0
+        ? `<div class="level-due">${row.due_reviews} due</div>`
+        : ''}
     `
+
     levelGrid.appendChild(levelItem)
-  }
+  })
 }
+
+
 
 
 async function getLevelProgress(levelId) {
@@ -338,9 +352,18 @@ async function updateOverallProgress() {
 // ===========================
 // Learning Modes
 // ===========================
-async function startNewWordsMode(levelId) {
+
+let currentLevelName = ""
+
+async function startNewWordsMode(levelId, levelName) {
   currentLearningMode = 'new'
   currentLevelId = levelId
+  currentLevelName = levelName
+
+  document.getElementById('level-selection').classList.add('hidden')
+  document.getElementById('learning-screen').classList.remove('hidden')
+
+  document.getElementById('current-mode-name').textContent = `${currentLevelName} - New Words`
   const newWords = await getNewWordsInLevel(levelId)
   if (newWords.length === 0) {
     alert('No new words to learn in this level!')
@@ -351,7 +374,7 @@ async function startNewWordsMode(levelId) {
   sessionStats = { correct: 0, wrong: 0 }
   levelSelection.classList.add('hidden')
   learningScreen.classList.remove('hidden')
-  document.getElementById('current-mode-name').textContent = `Level ${levelId} - New Words`
+  document.getElementById('current-mode-name').textContent = `Level ${currentLevelName} - New Words`
   updateSessionProgress()
   showStep()
 }
@@ -468,12 +491,11 @@ async function showStep() {
   if (currentStep === 0) {
     stepContent.innerHTML = `
       <div class="word-introduction">
-        <div class="language-label">ENGLISH</div>
-        <div class="main-word">${word.term}</div>
-
+        <div class="language-label">SISWATI</div>
+        <div class="main-word">${word.translation}</div>
         <div class="translation-section">
-          <div class="language-label">SISWATI</div>
-          <div class="translation">${word.translation}</div>
+          <div class="language-label">ENGLISH</div>
+          <div class="translation">${word.term}</div>
         </div>
 
         <div class="audio-section">
@@ -490,75 +512,76 @@ async function showStep() {
     return
   }
 
-  // ===== STEP 1: Multiple Choice (Text) =====
+  // Step 1: Multiple Choice
   if (currentStep === 1) {
-    const options = await getMultipleChoiceOptions(word.translation)
+    const options = await getMultipleChoiceOptions(word.term) // jetzt siSwati als Basis
     stepContent.innerHTML = `
-      <div class="multiple-choice-section">
-        <div class="question-header">Pick the correct answer</div>
-        <div class="question-text">${word.term}</div>
-        <div class="choices-grid">
-          ${options.map((option, index) => `
-            <button class="choice-button" 
-              onclick="checkChoice('${option}', '${word.translation}', 1)">
-              <span class="choice-number">${index + 1}</span>
-              <span class="choice-text">${option}</span>
-            </button>
-          `).join('')}
-        </div>
-        <div id="feedback" class="feedback hidden"></div>
-      </div>
-    `
-    return
-  }
-
-  // Step 2: Audio Multiple Choice
-if (currentStep === 2) {
-  const hasAudio = word.audio_url && word.audio_url.trim() !== ""
-
-  if (!hasAudio) {
-    // Falls kein Audio vorhanden -> direkt weiterspringen
-    nextStep()
-    return
-  }
-
-  // Erzeuge Antwortoptionen (korrekt + 3 falsche)
-  const options = await getMultipleChoiceOptions(word.term)
-
-  stepContent.innerHTML = `
-    <div class="audio-choice-section">
-      <div class="question-header">Choose the translation for what you hear</div>
-      
-      <div class="audio-player-section">
-        <button class="large-audio-button" onclick="playAudio('${word.audio_url}')">🔊 Play</button>
-      </div>
-
+    <div class="multiple-choice-section">
+      <div class="question-header">Pick the correct answer</div>
+      <div class="question-text">${word.translation}</div>
       <div class="choices-grid">
-        ${options.map((option, index) => 
-          `<button class="choice-button" onclick="checkAudioChoice('${option}', '${word.term}', 2)">
+        ${options.map((option, index) => {
+      return `<button class="choice-button" onclick="checkChoice('${option}', '${word.term}', 1)">
             <span class="choice-number">${index + 1}</span>
             <span class="choice-text">${option}</span>
           </button>`
-        ).join('')}
+    }).join('')}
       </div>
+    </div>
+  `
+    return
+  }
 
-      <div id="feedback" class="feedback hidden"></div>
+
+  // Falls Audio vorhanden, automatisch abspielen
+  if (word.audio_url) {
+    const audio = new Audio(word.audio_url)
+    setTimeout(() => audio.play(), 800)
+  }
+
+  // Step 2: Audio Multiple Choice
+  if (currentStep === 2) {
+    const options = shuffle([
+      word.translation,
+      getRandomWrongAnswer(word.translation),
+      getRandomWrongAnswer(word.translation),
+      getRandomWrongAnswer(word.translation)
+    ])
+
+    stepContent.innerHTML = `
+    <div class="audio-choice-section">
+      <div class="question-header">Choose the translation for what you hear</div>
+      <div class="audio-player-section">
+        <button class="large-audio-button" onclick="playAudio('${word.audio_url}')">
+          🔊 Play
+        </button>
+      </div>
+      <div class="choices-grid">
+        ${options.map((option, index) => `
+          <button 
+            id="choice-${index}"
+            class="choice-button"
+            onclick="checkAudioChoice('${option}', '${word.translation}', ${index})">
+            ${option}
+          </button>
+        `).join('')}
+      </div>
     </div>
   `
 
-  // Audio automatisch abspielen nach 500ms
-  setTimeout(() => {
-    playAudio(word.audio_url)
-  }, 500)
-  return
-}
+    // Autoplay beim Start
+    if (word.audio_url) {
+      setTimeout(() => playAudio(word.audio_url), 500)
+    }
+    return
+  }
 
 
   // ===== STEP 3: Input (kurze Eingabe) =====
   if (currentStep === 3) {
     stepContent.innerHTML = `
       <div class="input-section">
-        <div class="question-text">Type the siSwati word for "${word.term}":</div>
+        <div class="question-text">Type the siSwati word for "${word.translation}":</div>
         <input type="text" class="text-input" id="user-input" placeholder="Type here..." onkeypress="handleEnter(event)">
         <button class="submit-button" onclick="checkInput(3)">Check</button>
         <div id="feedback" class="feedback hidden"></div>
@@ -573,8 +596,8 @@ if (currentStep === 2) {
     stepContent.innerHTML = `
       <div class="typing-section">
         <div class="typing-header">Type the correct translation</div>
-        <div class="english-word">${word.term}</div>
-        <div class="language-indicator">SISWATI</div>
+        <div class="english-word">${word.translation}</div>
+        <div class="language-indicator">ENGLISH</div>
 
         <div class="typing-input-container">
           <input type="text" class="typing-input" id="typing-input" placeholder="" 
@@ -652,22 +675,39 @@ function shuffle(array) {
 async function getMultipleChoiceOptions(correct) {
   const allWords = await getAllWords()
   const wrongAnswers = []
+
+  // Hilfsfunktion für "Ähnlichkeit" (Länge + Anfangsbuchstaben)
+  function isSimilar(wordA, wordB) {
+    if (!wordA || !wordB) return false
+    // gleiche Länge oder max. 2 Zeichen Unterschied
+    const lengthDiff = Math.abs(wordA.length - wordB.length)
+    // gleicher erster oder letzter Buchstabe
+    const sameStart = wordA[0] === wordB[0]
+    const sameEnd = wordA[wordA.length - 1] === wordB[wordB.length - 1]
+    return lengthDiff <= 2 || sameStart || sameEnd
+  }
+
   while (wrongAnswers.length < 3) {
     const randomWord = allWords[Math.floor(Math.random() * allWords.length)]
     if (
       randomWord &&
-      randomWord.translation &&
-      randomWord.translation !== correct &&
-      !wrongAnswers.includes(randomWord.translation)
+      randomWord.term &&
+      randomWord.term !== correct &&
+      !wrongAnswers.includes(randomWord.term)
     ) {
-      wrongAnswers.push(randomWord.translation)
+      // nur "ähnliche" falsche Antworten bevorzugen
+      if (isSimilar(randomWord.term, correct) || Math.random() < 0.3) {
+        wrongAnswers.push(randomWord.term)
+      }
     }
-    if (wrongAnswers.length > 10) break // Prevent infinite loop
+    if (wrongAnswers.length > 10) break // Sicherung
   }
-  // Filter out undefined values before shuffling
+
   const options = [correct, ...wrongAnswers].filter(Boolean)
   return shuffle(options)
 }
+
+
 
 // ===========================
 // Step Handlers
@@ -705,27 +745,52 @@ window.checkChoice = checkChoice
 // Texteingabe
 async function checkInput(stepNumber) {
   const word = getCurrentWord()
-  const userInput = document.getElementById('user-input').value.trim().toLowerCase()
-  const correct = word.translation.toLowerCase()
+  const inputEl = document.getElementById('user-input')
+  const userInput = inputEl.value.trim().toLowerCase()
+  const correct = word.term.toLowerCase()
+
   const isCorrect = userInput === correct
 
   if (isCorrect) {
     sessionStats.correct++
     await updateWordProgress(word, true)
-    showCorrectFeedback()
+
+    // ✅ grünes Feld + Haken
+    inputEl.classList.add("correct")
+    inputEl.insertAdjacentHTML("afterend", `<span class="result-icon">✔</span>`)
+
+    setTimeout(() => nextStep(), 1500)
   } else {
     sessionStats.wrong++
     await updateWordProgress(word, false)
-    showWrongFeedback(userInput, word.translation, word.term)
+
+    // ❌ rotes Feld + Kreuz
+    inputEl.classList.add("wrong")
+    inputEl.insertAdjacentHTML("afterend", `<span class="result-icon">✖</span>`)
+
+    // Richtige Lösung anzeigen
+    const feedback = document.createElement("div")
+    feedback.className = "answer-feedback"
+    feedback.innerHTML = `
+      <div class="wrong-answer">YOUR ANSWER: ${userInput || "(empty)"}</div>
+      <div class="correct-answer">
+        <div><b>SISWATI:</b> ${word.translation}</div>
+        <div><b>ENGLISH:</b> ${word.term}</div>
+      </div>
+      <div class="next-button-container">
+        <button class="next-button-small" onclick="nextStep()">Next ▶</button>
+      </div>
+    `
+    inputEl.parentNode.appendChild(feedback)
   }
 }
 window.checkInput = checkInput
 
+
 // ===================== Audio Multiple Choice =====================
-async function checkAudioChoice(selected, correct, stepNumber) {
+async function checkAudioChoice(selected, correct, buttonIndex) {
   const word = getCurrentWord()
-  const feedbackContainer = document.getElementById('feedback-container')
-  const feedbackMessage = document.getElementById('feedback-message')
+  const button = document.getElementById(`choice-${buttonIndex}`)
 
   const isCorrect = selected === correct
 
@@ -733,38 +798,83 @@ async function checkAudioChoice(selected, correct, stepNumber) {
     sessionStats.correct++
     await updateWordProgress(word, true)
 
-    // ✅ Grüner Feedback-Button
-    feedbackMessage.innerHTML = `<div class="feedback-correct">✅ Correct!</div>`
-    feedbackContainer.classList.remove('hidden')
+    // ✅ Button grün + Haken
+    button.classList.add("correct")
+    button.innerHTML = `${selected} ✔`
 
-    // nach 1.5s automatisch weiter
-    setTimeout(() => {
-      feedbackContainer.classList.add('hidden')
-      nextStep()
-    }, 1500)
+    setTimeout(() => nextStep(), 1500)
   } else {
     sessionStats.wrong++
     await updateWordProgress(word, false)
 
-    // ❌ Rotes Feedback mit korrekter Antwort
-    feedbackMessage.innerHTML = `
-      <div class="feedback-wrong">
-        <div class="your-answer">YOUR ANSWER:<br>${selected}</div>
-        <div class="correct-answer">
-          <div class="label">SISWATI</div>
-          <div class="word">${correct}</div>
-          <div class="label">ENGLISH</div>
-          <div class="word">${word.term}</div>
-        </div>
-        <div class="next-button-container">
-          <button class="next-button-small" onclick="nextStep()">Next ▶</button>
-        </div>
+    // ❌ Roter Button + Kreuz
+    button.classList.add("wrong")
+    button.innerHTML = `${selected} ✖`
+
+    // zusätzlich die richtige Antwort hervorheben
+    const correctButton = [...document.querySelectorAll('.choice-button')]
+      .find(btn => btn.textContent.trim().replace(/[✔✖]/g, '') === correct)
+    if (correctButton) {
+      correctButton.classList.add("correct")
+      correctButton.innerHTML = `${correct} ✔`
+    }
+
+    // "Next ▶" Button unten anzeigen
+    const nextContainer = document.createElement("div")
+    nextContainer.innerHTML = `
+      <div class="next-button-container">
+        <button class="next-button-small" onclick="nextStep()">Next ▶</button>
       </div>
     `
-    feedbackContainer.classList.remove('hidden')
+    document.querySelector('.audio-choice-section').appendChild(nextContainer)
   }
 }
 window.checkAudioChoice = checkAudioChoice
+
+async function checkTyping() {
+  const word = getCurrentWord()
+  const inputEl = document.getElementById('typing-input')
+  const userInput = inputEl.value.trim().toLowerCase()
+  const correct = word.term.toLowerCase()
+
+  const isCorrect = userInput === correct
+
+  if (isCorrect) {
+    sessionStats.correct++
+    await updateWordProgress(word, true)
+
+    // ✅ Feld grün + Haken
+    inputEl.classList.add("correct")
+    inputEl.insertAdjacentHTML("afterend", `<span class="result-icon">✔</span>`)
+
+    setTimeout(() => nextStep(), 1500)
+  } else {
+    sessionStats.wrong++
+    await updateWordProgress(word, false)
+
+    // ❌ Feld rot + Kreuz
+    inputEl.classList.add("wrong")
+    inputEl.insertAdjacentHTML("afterend", `<span class="result-icon">✖</span>`)
+
+    // Richtige Lösung anzeigen
+    const feedback = document.createElement("div")
+    feedback.className = "answer-feedback"
+    feedback.innerHTML = `
+      <div class="wrong-answer">YOUR ANSWER: ${userInput || "(empty)"}</div>
+      <div class="correct-answer">
+        <div><b>SISWATI:</b> ${word.translation}</div>
+        <div><b>ENGLISH:</b> ${word.term}</div>
+      </div>
+      <div class="next-button-container">
+        <button class="next-button-small" onclick="nextStep()">Next ▶</button>
+      </div>
+    `
+    inputEl.parentNode.appendChild(feedback)
+  }
+}
+window.checkTyping = checkTyping
+
+
 
 function playAudio(audioUrl) {
   if (!audioUrl) return

@@ -1571,3 +1571,86 @@ body {
   font-size: 20px;
   margin: 12px 0;
 }
+
+.choice-button.correct {
+  background-color: #4CAF50 !important; /* grün */
+  color: white;
+  border: 2px solid #388E3C;
+}
+
+.choice-button.wrong {
+  background-color: #F44336 !important; /* rot */
+  color: white;
+  border: 2px solid #B71C1C;
+}
+
+.text-input.correct,
+.typing-input.correct {
+  border: 2px solid #4CAF50;
+  background-color: #E8F5E9;
+}
+
+.text-input.wrong,
+.typing-input.wrong {
+  border: 2px solid #F44336;
+  background-color: #FFEBEE;
+}
+
+/* ✅/❌ Symbole neben Input */
+.result-icon {
+  margin-left: 8px;
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+/* Feedback bei falschen Antworten */
+.answer-feedback {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #fff3e0;
+  border: 1px solid #ff9800;
+}
+
+.answer-feedback .wrong-answer {
+  color: #f44336;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.answer-feedback .correct-answer {
+  color: #4caf50;
+}
+
+.text-input.correct,
+.typing-input.correct {
+  border: 2px solid #4CAF50;
+  background-color: #E8F5E9;
+}
+
+.text-input.wrong,
+.typing-input.wrong {
+  border: 2px solid #F44336;
+  background-color: #FFEBEE;
+}
+
+/* =======================
+   Fertig gelernte Levels
+   ======================= */
+.level-item.completed {
+  border: 2px solid #4CAF50;   /* grüner Rand */
+  background-color: #e8f9e8;   /* ganz leichtes Grün im Hintergrund */
+  color: #2e7d32;              /* dunkleres Grün für Text */
+  font-weight: bold;
+  transition: 0.3s ease;
+}
+
+.level-item.completed .level-number {
+  color: #2e7d32;
+  font-size: 1.2em;
+}
+
+.level-item.completed:hover {
+  background-color: #d4f5d4;   /* etwas kräftiger beim Hover */
+  transform: scale(1.03);      /* leichter Hover-Effekt */
+}
