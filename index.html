@@ -1,28 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
-  <title>siSwati Learning App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>siSwati Flashcards</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Use your merged main.js as the main script -->
-  <script type="module" src="/src/main.js"></script>
 </head>
-
 <body>
   <div class="app-container">
-    <!-- ================== AUTH SCREEN ================== -->
+    <!-- Authentication Screen -->
     <div class="auth-screen" id="auth-screen">
       <div class="auth-container">
         <div class="auth-header">
           <h1>siSwati</h1>
           <p>Learn siSwati with spaced repetition</p>
         </div>
+
         <!-- Login Form -->
         <div class="auth-form" id="login-form">
           <h2>Sign In</h2>
-          <form>
+          <form onsubmit="handleLogin(event)">
             <div class="form-group">
               <label for="login-email">Email Address</label>
               <input type="email" id="login-email" required>
@@ -38,10 +34,11 @@
           </div>
           <div class="auth-error hidden" id="login-error"></div>
         </div>
+
         <!-- Register Form -->
         <div class="auth-form hidden" id="register-form">
           <h2>Create Account</h2>
-          <form>
+          <form onsubmit="handleRegister(event)">
             <div class="form-group">
               <label for="register-email">Email Address</label>
               <input type="email" id="register-email" required>
@@ -64,7 +61,7 @@
       </div>
     </div>
 
-    <!-- ================== MAIN APP SCREEN ================== -->
+    <!-- Main App Screen -->
     <div class="main-app hidden" id="main-app">
       <div class="header">
         <div class="header-content">
@@ -85,8 +82,9 @@
         </div>
       </div>
 
-      <!-- ================== LEVEL SELECTION ================== -->
+      <!-- Level Selection Screen -->
       <div class="level-selection" id="level-selection">
+        <!-- Learning Mode Selection -->
         <div class="learning-modes">
           <div class="mode-card" id="review-mode" onclick="startReviewMode()">
             <div class="mode-icon review">🔄</div>
@@ -94,6 +92,7 @@
             <div class="mode-subtitle">Practice learned words</div>
             <div class="mode-count" id="review-count">0 words</div>
           </div>
+          
           <div class="mode-card" id="difficult-mode" onclick="startDifficultMode()">
             <div class="mode-icon difficult">⚠️</div>
             <div class="mode-title">Difficult Words</div>
@@ -101,19 +100,23 @@
             <div class="mode-count" id="difficult-count">0 words</div>
           </div>
         </div>
+
+        <!-- Level Grid for New Words -->
         <div class="section-header">
           <h2>Learn New Words</h2>
           <p>Choose a level to learn new vocabulary</p>
         </div>
+        
         <div class="level-grid" id="level-grid">
-          <!-- Levels will be rendered here -->
+          <!-- Levels werden dynamisch eingefügt -->
         </div>
+        
         <div class="level-management" id="level-management">
-          <!-- Admin-only buttons will be rendered here -->
+          <!-- Admin-only buttons werden dynamisch eingefügt -->
         </div>
       </div>
 
-      <!-- ================== LEVEL MANAGER MODAL ================== -->
+      <!-- Level Manager Modal -->
       <div class="modal-overlay hidden" id="level-manager-modal">
         <div class="modal">
           <div class="modal-header">
@@ -122,15 +125,14 @@
           </div>
           <div class="modal-content">
             <div class="level-manager-list" id="level-manager-list">
-              <!-- Level management items will be rendered here -->
+              <!-- Level management items werden dynamisch eingefügt -->
             </div>
             <button class="add-level-btn" onclick="addNewLevel()">+ Add New Level</button>
-            <button id="logout-btn" onclick="handleLogout()">Logout</button>
           </div>
         </div>
       </div>
 
-      <!-- ================== WORD MANAGER MODAL ================== -->
+      <!-- Word Manager Modal -->
       <div class="modal-overlay hidden" id="word-manager-modal">
         <div class="modal">
           <div class="modal-header">
@@ -144,18 +146,18 @@
             <div class="level-selector">
               <label for="word-level-select">Select Level:</label>
               <select id="word-level-select" onchange="renderWordManager()">
-                <!-- Options will be rendered here -->
+                <!-- Options werden dynamisch eingefügt -->
               </select>
             </div>
             <div class="word-manager-list" id="word-manager-list">
-              <!-- Word management items will be rendered here -->
+              <!-- Word management items werden dynamisch eingefügt -->
             </div>
             <button class="add-word-btn" onclick="addNewWord()">+ Add New Word</button>
           </div>
         </div>
       </div>
 
-      <!-- ================== AUDIO MANAGER MODAL ================== -->
+      <!-- Audio Manager Modal -->
       <div class="modal-overlay hidden" id="audio-manager-modal">
         <div class="modal">
           <div class="modal-header">
@@ -164,28 +166,17 @@
           </div>
           <div class="modal-content">
             <div class="audio-info">
-              <p>Upload MP3 files for correct pronunciation. Files will be stored locally in your browser.</p>
+              <p>Upload MP3 files for correct pronunciation. Files will be stored in Supabase Storage.</p>
             </div>
             <div class="audio-manager-list" id="audio-manager-list">
-              <!-- Audio management items will be rendered here -->
+              <!-- Audio management items werden dynamisch eingefügt -->
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ================== LEARNING SCREEN ================== -->
+      <!-- Learning Screen -->
       <div class="learning-screen hidden" id="learning-screen">
-        <!-- Feedback (Correct/Incorrect) -->
-        <div id="feedback-container" class="hidden">
-          <div id="feedback-message"></div>
-        </div>
-
-        <!-- Progressbar -->
-        <div id="progress-container">
-          <div id="progress-bar"></div>
-        </div>
-
-        <!-- Header -->
         <div class="learning-header">
           <button class="back-btn" onclick="backToLevels()">← Back</button>
           <div class="current-mode-info">
@@ -195,17 +186,17 @@
             </div>
           </div>
         </div>
-
-        <!-- Flashcard Container -->
+        
         <div class="flashcard" id="flashcard">
-          <div id="step-content">
-            <!-- Step content will be rendered here -->
+          <div class="step-content" id="step-content">
+            <!-- Content wird dynamisch eingefügt -->
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-
-      <script type="module" src="src/main.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="src/main.js"></script>
 </body>
-
 </html>

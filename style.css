@@ -1399,38 +1399,61 @@ body {
   background: #e67e22;
 }
 
-/* Feedback Styles */
-#feedback-container {
+/* Feedback Styles - Updated to match reference images */
+.typing-feedback {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2000;
-}
-
-.correct-feedback {
-  background: #4caf50;
-  color: white;
-  padding: 10px 15px;
-  border-radius: 8px;
-  font-weight: bold;
-}
-
-.wrong-feedback {
-  background: #ff4d4d;
-  color: white;
-  padding: 12px;
-  border-radius: 8px;
-  max-width: 250px;
-}
-
-.wrong-feedback .your-answer {
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-
-.wrong-feedback .correct-answer {
-  margin-top: 6px;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
   font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  z-index: 10;
+}
+
+.typing-feedback.correct {
+  background: #00c851;
+  color: white;
+}
+
+.typing-feedback.wrong {
+  background: #ff4444;
+  color: white;
+}
+
+/* Wrong Answer Display */
+.wrong-answer-display {
+  background: #ffebee;
+  border: 2px solid #ff4444;
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.wrong-answer-label {
+  font-size: 12px;
+  color: #ff4444;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.wrong-answer-text {
+  font-size: 18px;
+  color: #333;
+  font-weight: 500;
+}
+
+.correct-answer-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ffcdd2;
 }
 
 .correct-answer-label {
@@ -1550,107 +1573,4 @@ body {
     grid-template-columns: 1fr;
     gap: 15px;
   }
-}
-
-#game-container {
-  display: block !important;
-  background: #ffffff !important;
-  color: #000000 !important;
-  font-size: 20px;
-  padding: 20px;
-}
-
-#question {
-  font-weight: bold;
-  font-size: 24px;
-  margin-bottom: 12px;
-}
-
-#answer {
-  color: #333;
-  font-size: 20px;
-  margin: 12px 0;
-}
-
-.choice-button.correct {
-  background-color: #4CAF50 !important; /* grün */
-  color: white;
-  border: 2px solid #388E3C;
-}
-
-.choice-button.wrong {
-  background-color: #F44336 !important; /* rot */
-  color: white;
-  border: 2px solid #B71C1C;
-}
-
-.text-input.correct,
-.typing-input.correct {
-  border: 2px solid #4CAF50;
-  background-color: #E8F5E9;
-}
-
-.text-input.wrong,
-.typing-input.wrong {
-  border: 2px solid #F44336;
-  background-color: #FFEBEE;
-}
-
-/* ✅/❌ Symbole neben Input */
-.result-icon {
-  margin-left: 8px;
-  font-size: 18px;
-  vertical-align: middle;
-}
-
-/* Feedback bei falschen Antworten */
-.answer-feedback {
-  margin-top: 12px;
-  padding: 10px;
-  border-radius: 8px;
-  background: #fff3e0;
-  border: 1px solid #ff9800;
-}
-
-.answer-feedback .wrong-answer {
-  color: #f44336;
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-
-.answer-feedback .correct-answer {
-  color: #4caf50;
-}
-
-.text-input.correct,
-.typing-input.correct {
-  border: 2px solid #4CAF50;
-  background-color: #E8F5E9;
-}
-
-.text-input.wrong,
-.typing-input.wrong {
-  border: 2px solid #F44336;
-  background-color: #FFEBEE;
-}
-
-/* =======================
-   Fertig gelernte Levels
-   ======================= */
-.level-item.completed {
-  border: 2px solid #4CAF50;   /* grüner Rand */
-  background-color: #e8f9e8;   /* ganz leichtes Grün im Hintergrund */
-  color: #2e7d32;              /* dunkleres Grün für Text */
-  font-weight: bold;
-  transition: 0.3s ease;
-}
-
-.level-item.completed .level-number {
-  color: #2e7d32;
-  font-size: 1.2em;
-}
-
-.level-item.completed:hover {
-  background-color: #d4f5d4;   /* etwas kräftiger beim Hover */
-  transform: scale(1.03);      /* leichter Hover-Effekt */
 }
